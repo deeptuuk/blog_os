@@ -2,10 +2,10 @@
 #![no_main] // disable all Rust-level entry points
 #![feature(abi_x86_interrupt)]
 
-use core::panic::PanicInfo;
 mod vga_buffer;
 mod serial;
 mod interrupts;
+mod gdt;
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
@@ -15,17 +15,23 @@ pub extern "C" fn _start() -> ! {
     serial_println!("Hello World{}", "!");
 
     interrupts::init_idt();
+    gdt::init_gdt();
     
-    x86_64::instructions::interrupts::int3();
+    //x86_64::instructions::interrupts::int3();
+
+    // // trigger a page fault
+    // unsafe {
+    //     *(0xdeadbeef as *mut u64) = 42;
+    // };
+
+    fn stack_overflow() {
+        stack_overflow(); // for each recursion, the return address is pushed
+    }
+
+    // trigger a stack overflow
+    stack_overflow();    
 
     serial_println!("It did not crash!");
     loop {}
 }
 
-/// This function is called on panic.
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    //println!("{}", info);
-    serial_println!("{}", info);
-    loop {}
-}
